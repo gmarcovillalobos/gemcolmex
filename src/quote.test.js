@@ -1,0 +1,8 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {initialForm,validate,messageFor,whatsappUrl,isResidential} from './quote.js';
+const complete={...initialForm,service:'residentiel',property:'Maison',bedrooms:'2',bathrooms:'1',date:'2026-10-20',name:'Élodie Roy',phone:'514-555-0123',city:'Montréal'};
+test('required fields and conditional rooms',()=>{assert.ok(validate(initialForm,'2026-10-20').service);assert.deepEqual(validate(complete,'2026-10-20'),{});assert.ok(validate({...complete,bedrooms:''},'2026-10-20').bedrooms);assert.equal(isResidential({...complete,service:'bureaux'}),false)});
+test('dates, optional email, phone and area',()=>{assert.ok(validate({...complete,date:'2026-10-19'},'2026-10-20').date);assert.ok(validate({...complete,email:'invalid'},'2026-10-20').email);assert.ok(validate({...complete,phone:'123'},'2026-10-20').phone);assert.ok(validate({...complete,area:'-1'},'2026-10-20').area);assert.deepEqual(validate({...complete,date:'2026-10-21',email:'a@b.ca'},'2026-10-20'),{})});
+test('commercial request omits stale bedroom data and optional blanks',()=>{const text=messageFor({...complete,service:'commercial',property:'Commerce'});assert.ok(!text.includes('Nombre de chambres'));assert.ok(!text.includes('Courriel :'));assert.ok(text.includes('Entretien commercial'))});
+test('WhatsApp uses encoded complete French message',()=>{const text=messageFor({...complete,notes:'Accès arrière & entrée #2'});const url=new URL(whatsappUrl(text));assert.equal(url.origin,'https://wa.me');assert.equal(url.pathname,'/15145166773');assert.equal(url.searchParams.get('text'),text);assert.ok(text.includes('Élodie Roy'))});
